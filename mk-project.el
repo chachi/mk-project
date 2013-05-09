@@ -735,7 +735,7 @@ completion. See also: `project-index', `project-find-file-ido'."
        ((= 0 match-cnt)
         (message "No matches for \"%s\" in this project" regex))
        ((= 1 match-cnt )
-        (find-file (car matches)))
+        (find-file (concat (file-name-as-directory mk-proj-basedir) (car matches))))
        (t
         (let ((file (if (mk-proj-use-ido)
                         (ido-completing-read "Multiple matches, pick one (ido): " matches)
