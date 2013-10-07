@@ -150,6 +150,18 @@ If non-null (or if the function returns non-null), the custom
 find command will be used and the `mk-proj-ignore-patterns' and
 `mk-proj-vcs' settings are not used when in the grep command.")
 
+(defvar mk-proj-tags-cmd nil
+  "Specifies a custom \"etags\" command to use when building the
+  TAGS file. This command will have filenames to parse passed in
+  and will have an output file specified as the sole
+  parameter. Optional. The value is a string. It could, for
+  example, be used to invoke Exuberant ctags with -e rather than
+  the default etags command.
+
+  If non-null, the
+  custom etags command will be use in `project-tags` when
+  creating the TAGS file.")
+
 (defconst mk-proj-fib-name "*file-index*"
   "Buffer name of the file-list cache. This buffer contains a
 list of all the files under the project's basedir (minus those
@@ -182,7 +194,8 @@ value is not used if a custom find command is set in
                               mk-proj-open-files-cache
                               mk-proj-src-find-cmd
                               mk-proj-grep-find-cmd
-                              mk-proj-index-find-cmd)
+                              mk-proj-index-find-cmd
+			      mk-proj-tags-cmd)
   "List of all our project settings")
 
 ;; ---------------------------------------------------------------------
@@ -256,7 +269,8 @@ load time. See also `project-menu-remove'."
   (let ((cmd (ecase context
                ('src   mk-proj-src-find-cmd)
                ('grep  mk-proj-grep-find-cmd)
-               ('index mk-proj-index-find-cmd))))
+               ('index mk-proj-index-find-cmd)
+	       ('tags  mk-proj-tags-cmd))))
     (if cmd
         (cond ((stringp cmd) cmd)
               ((functionp cmd) (funcall cmd context))
@@ -287,7 +301,7 @@ load time. See also `project-menu-remove'."
 
 (defun mk-proj-load-vars (proj-name proj-alist)
   "Set project variables from proj-alist"
-  (labels ((config-val (key)
+  (cl-labels ((config-val (key)
             (if (assoc key proj-alist)
                 (car (cdr (assoc key proj-alist)))
               nil))
@@ -302,7 +316,7 @@ load time. See also `project-menu-remove'."
     ;; optional vars
     (dolist (v '(src-patterns ignore-patterns ack-args vcs
                  tags-file compile-cmd src-find-cmd grep-find-cmd
-                 index-find-cmd startup-hook shutdown-hook))
+                 index-find-cmd tags-cmd startup-hook shutdown-hook))
       (maybe-set-var v))
     (maybe-set-var 'tags-file #'expand-file-name)
     (maybe-set-var 'file-list-cache #'expand-file-name)
@@ -496,8 +510,9 @@ load time. See also `project-menu-remove'."
              (default-find-cmd (concat "find '" (if relative-tags "." mk-proj-basedir)
                                        "' -type f "
                                        (mk-proj-find-cmd-src-args mk-proj-src-patterns)))
+	     (default-tag-cmd  (concat "etags -o " tags-file-name " -"))
              (etags-cmd (concat (or (mk-proj-find-cmd-val 'src) default-find-cmd)
-                                " | etags -o '" tags-file-name "' - "))
+                                " | " (or (mk-proj-find-cmd-val 'tags) default-tag-cmd)))
              (proc-name "etags-process"))
         (message "project-tags default-dir %s" default-directory)
         (message "project-tags cmd \"%s\"" etags-cmd)
