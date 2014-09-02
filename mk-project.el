@@ -508,8 +508,12 @@ load time. See also `project-menu-remove'."
              (default-directory (file-name-as-directory
                                  (file-name-directory mk-proj-tags-file)))
              (default-find-cmd (concat "find '" (if relative-tags "." mk-proj-basedir)
-                                       "' -type f "
-                                       (mk-proj-find-cmd-src-args mk-proj-src-patterns)))
+				       "' -path ./build -prune -o -path ./abuild -prune -o"
+				       " -path ./sbuild -prune -o -type f "
+                                       (mk-proj-find-cmd-src-args mk-proj-src-patterns)
+				       " -print"
+				       (mk-proj-find-cmd-ignore-args mk-proj-ignore-patterns)
+				       ))
 	     (default-tag-cmd  (concat "etags -o " tags-file-name " -"))
              (etags-cmd (concat (or (mk-proj-find-cmd-val 'src) default-find-cmd)
                                 " | " (or (mk-proj-find-cmd-val 'tags) default-tag-cmd)))
@@ -682,12 +686,15 @@ With C-u prefix, start ack from the current directory."
     (mk-proj-fib-clear)
     (let* ((default-directory (file-name-as-directory mk-proj-basedir))
            (start-dir (if mk-proj-file-index-relative-paths "." mk-proj-basedir))
-           (find-cmd (concat "find '" start-dir "' -type f "
-                            (mk-proj-find-cmd-ignore-args mk-proj-ignore-patterns)))
+	   (default-find-cmd (concat "find '" "."
+				     "' -path ./build -prune -o -path ./abuild -prune -o"
+				     " -path ./sbuild -prune -o -type f "
+				     (mk-proj-find-cmd-src-args mk-proj-src-patterns)
+				     " -print"
+				     (mk-proj-find-cmd-ignore-args mk-proj-ignore-patterns)
+				     ))
            (proc-name "index-process"))
-      (when (mk-proj-get-vcs-path)
-        (setq find-cmd (concat find-cmd " -not -path " (mk-proj-get-vcs-path))))
-      (setq find-cmd (or (mk-proj-find-cmd-val 'index) find-cmd))
+      (setq find-cmd (or (mk-proj-find-cmd-val 'index) default-find-cmd))
       (with-current-buffer (get-buffer-create mk-proj-fib-name)
         (buffer-disable-undo) ;; this is a large change we don't need to undo
         (setq buffer-read-only nil))
@@ -781,6 +788,14 @@ selection of the file. See also: `project-index',
   (multi-occur (mk-proj-filter (lambda (b) (if (buffer-file-name b) b nil)) 
                                (mk-proj-buffers))
                regex))
+
+;; ---------------------------------------------------------------------
+;; Query Replace
+;; ---------------------------------------------------------------------
+;; (defun project-query-replace (from-str to-str &optional current-prefix)
+;;   (interactive (query-replace-read-args "Project query replace" nil t))
+  
+;;   )
 
 ;; ---------------------------------------------------------------------
 ;; Menus
